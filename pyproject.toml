@@ -42,6 +42,29 @@ benchmark = [
 requires = ["scikit-build-core", "numpy", "pybind11"]
 build-backend = "scikit_build_core.build"
 
+[tool.uv]
+# CI resolves fresh on every run (`uv run --extra ...`, no uv.lock), and uv's
+# default prerelease policy is "if-necessary-or-explicit" -- it will reach for
+# a pre-release when that is the only way to satisfy the constraints. That is
+# how `test_pymc` started failing with
+#
+#     AttributeError: module 'numpy' has no attribute 'row_stack'
+#
+# numba/np/arrayobj.py calls overload(np.row_stack) at import, and numpy
+# removed np.row_stack in 2.5.0. Every FINAL numba caps numpy against this
+# (0.63.0 -> numpy<2.4, 0.66.0 -> numpy<2.5), but numba 0.63.0b1 declares only
+# numpy>=1.22 -- the cap landed after that beta was published. Wanting the
+# newest numpy and bounded by pytensor's numba<=0.66.0, the resolver cannot
+# use numba 0.66.0 (it demands numpy<2.5) and picks the uncapped pre-release
+# instead, pairing numba 0.63.0b1 with numpy 2.5.2.
+#
+# pip resolves the same requirements to numba 0.66.0 + numpy 2.4.6, which
+# works, because pip excludes pre-releases by default. This makes uv agree.
+#
+# Note a numba<=0.66.0 pin would NOT have helped: 0.63.0b1 already satisfies
+# it. The problem is the pre-release, not the ceiling.
+prerelease = "disallow"
+
 [tool.scikit-build]
 sdist.exclude = []
 sdist.include = ["src/exoplanet_core/exoplanet_core_version.py"]
