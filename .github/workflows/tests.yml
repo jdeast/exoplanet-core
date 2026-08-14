@@ -42,5 +42,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Report resolved versions
+        run: |
+          uv run ${{ matrix.uv-extra-args }} python -c "
+          import importlib.metadata as md
+          for n in ('numpy','numba','llvmlite','pytensor','pymc','jax','jaxlib'):
+              try: print(f'{n:12s} {md.version(n)}')
+              except Exception: print(f'{n:12s} -- not installed')
+          "
+
       - name: Run tests
         run: uv run ${{ matrix.uv-extra-args }} pytest -v ${{ matrix.test-path }}
