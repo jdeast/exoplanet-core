@@ -121,8 +121,18 @@ jobs:
       # for a week sends seven identical mails, which is how an alarm becomes
       # noise and then becomes invisible. One issue, updated in place, has a
       # state that means something: open = still broken, closed = fixed.
+      #
+      # continue-on-error on both issue steps is load-bearing, not caution.
+      # Issue bookkeeping must never decide this job's verdict: the tests
+      # do. Without it, `gh issue list` failing turns a GREEN suite RED --
+      # which is exactly what happened on a fork, where GitHub disables
+      # Issues by default ("the '<repo>' repository has disabled issues",
+      # then `set -e` ends the step). A repo with issues off, a token
+      # without issues:write, or a transient API error would all invert the
+      # signal the job exists to give.
       - name: Open or update the tracking issue on failure
         if: failure()
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -161,6 +171,7 @@ jobs:
       # while the suite is failing.
       - name: Close the tracking issue when the suite is green again
         if: success()
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
